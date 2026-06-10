@@ -13,13 +13,6 @@ import { TeacherPlanWizard } from './pages/TeacherPlanWizard';
 import { TeacherLessonPlan } from './pages/TeacherLessonPlan';
 import { Resources } from './pages/Resources';
 import { ResourceEditor } from './pages/ResourceEditor';
-import { InclusionHome } from './pages/InclusionHome';
-import { InclusionPlanner } from './pages/InclusionPlanner';
-import { InclusionAsistencia } from './pages/InclusionAsistencia';
-import { PrimerosPasos } from './pages/PrimerosPasos';
-import { RampDetail } from './pages/RampDetail';
-import { DeviceDetail } from './pages/DeviceDetail';
-import { DevicesCatalog } from './pages/DevicesCatalog';
 import { api } from './services/api';
 
 function AuthenticatedRoutes() {
@@ -31,33 +24,33 @@ function AuthenticatedRoutes() {
 
   return (
     <Routes>
-      <Route path="/curso/:id/crear" element={<Wizard />} />
-      <Route path="/doc/:id" element={<Document />} />
-      <Route path="/teacher/plan/:id" element={<TeacherLessonPlan />} />
-      <Route path="/recursos/:type/new" element={<ResourceEditor />} />
-      <Route path="/recursos/:id" element={<ResourceEditor />} />
+      <Route path='/curso/:id/crear' element={<Wizard />} />
+      <Route path='/doc/:id' element={<Document />} />
+      <Route path='/teacher/plan/:id' element={<TeacherLessonPlan />} />
+      <Route path='/recursos/:type/new' element={<ResourceEditor />} />
+      <Route path='/recursos/:id' element={<ResourceEditor />} />
       <Route
-        path="*"
+        path='*'
         element={
           <MainLayout>
             <Routes>
               <Route
-                path="/"
+                path='/'
                 element={
                   userRole === 'coordinator' ? (
                     <CoordinatorHome />
                   ) : userRole === 'teacher' ? (
                     <TeacherHome />
                   ) : (
-                    <Navigate to="/" replace />
+                    <Navigate to='/' replace />
                   )
                 }
               />
-              <Route path="/curso/:id" element={<Course />} />
-              <Route path="/teacher/cs/:id" element={<TeacherCourseSubject />} />
-              <Route path="/teacher/planificar/:csId/:classNumber" element={<TeacherPlanWizard />} />
-              <Route path="/recursos" element={<Resources />} />
-              <Route path="*" element={<Navigate to="/" replace />} />
+              <Route path='/curso/:id' element={<Course />} />
+              <Route path='/teacher/cs/:id' element={<TeacherCourseSubject />} />
+              <Route path='/teacher/planificar/:csId/:classNumber' element={<TeacherPlanWizard />} />
+              <Route path='/recursos' element={<Resources />} />
+              <Route path='*' element={<Navigate to='/' replace />} />
             </Routes>
           </MainLayout>
         }
@@ -131,25 +124,7 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* PWA standalone: redirect / to /inclusion */}
-        <Route
-          path="/"
-          element={
-            window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone
-              ? <Navigate to="/inclusion" replace />
-              : <AuthenticatedRoutes />
-          }
-        />
-        {/* Public routes (no auth required) */}
-        <Route path="/inclusion" element={<InclusionHome />} />
-        <Route path="/inclusion/planificar" element={<InclusionPlanner />} />
-        <Route path="/inclusion/asistencia" element={<InclusionAsistencia />} />
-        <Route path="/inclusion/primeros-pasos" element={<PrimerosPasos />} />
-        <Route path="/inclusion/primeros-pasos/:rampId" element={<RampDetail />} />
-        <Route path="/inclusion/dispositivos" element={<DevicesCatalog />} />
-        <Route path="/inclusion/dispositivo/:id" element={<DeviceDetail />} />
-        {/* All other routes require auth */}
-        <Route path="*" element={<AuthenticatedRoutes />} />
+        <Route path='*' element={<AuthenticatedRoutes />} />
       </Routes>
     </BrowserRouter>
   );

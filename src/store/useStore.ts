@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import type {
   User,
   Area,
@@ -18,8 +19,6 @@ import type {
   UserRole,
   Font,
   Resource,
-  Ramp,
-  Device,
 } from '../types';
 
 interface WizardData {
@@ -84,9 +83,6 @@ interface AppState {
   teacherChatHistory: ChatMessage[];
   resources: Resource[];
   currentResource: Resource | null;
-  inclusionChatHistory: ChatMessage[];
-  ramps: Ramp[];
-  devices: Device[];
 
   setUsers: (users: User[]) => void;
   setCurrentUser: (user: User | null) => void;
@@ -123,96 +119,25 @@ interface AppState {
   getUserArea: () => Area | undefined;
   setResources: (resources: Resource[]) => void;
   setCurrentResource: (resource: Resource | null) => void;
-  addInclusionChatMessage: (message: ChatMessage) => void;
-  clearInclusionChatHistory: () => void;
-  setRamps: (ramps: Ramp[]) => void;
-  setDevices: (devices: Device[]) => void;
 }
 
-export const useStore = create<AppState>((set, get) => ({
-  users: [],
-  currentUser: null,
-  courses: [],
-  areas: [],
-  subjects: [],
-  nuclei: [],
-  knowledgeAreas: [],
-  categories: [],
-  documents: [],
-  courseSubjects: [],
-  momentTypes: [],
-  activitiesByMoment: { apertura: [], desarrollo: [], cierre: [] },
-  activityRecommendations: null,
-  fonts: [],
-  wizardData: {
-    step: 1,
-    name: '',
-    areaId: null,
-    nucleusIds: [],
-    categoryIds: [],
-    startDate: '',
-    endDate: '',
-    subjectsData: {},
-    subjectCategories: {},
-  },
-  currentDocument: null,
-  chatHistory: [],
-  isGenerating: false,
-  expandedSubjects: {},
-  categoryPickerTarget: null,
-  teacherCourses: [],
-  currentCourseSubject: null,
-  coordinationStatus: null,
-  lessonPlans: [],
-  lessonWizardData: {
-    step: 1,
-    classNumber: null,
-    title: '',
-    categoryIds: [],
-    objective: '',
-    knowledgeContent: '',
-    didacticStrategies: '',
-    classFormat: '',
-    moments: {
-      apertura: { activities: [] },
-      desarrollo: { activities: [] },
-      cierre: { activities: [] },
-    },
-    customInstruction: '',
-    resourcesMode: 'global',
-    globalFontId: null,
-    momentFontIds: { apertura: null, desarrollo: null, cierre: null },
-  },
-  currentLessonPlan: null,
-  teacherChatHistory: [],
-  resources: [],
-  currentResource: null,
-  inclusionChatHistory: [],
-  ramps: [],
-  devices: [],
-
-  setUsers: (users) => set({ users }),
-  setCurrentUser: (currentUser) => set({ currentUser }),
-  setCourses: (courses) => set({ courses }),
-  setAreas: (areas) => set({ areas }),
-  setSubjects: (subjects) => set({ subjects }),
-  setNuclei: (nuclei) => set({ nuclei }),
-  setKnowledgeAreas: (knowledgeAreas) => set({ knowledgeAreas }),
-  setCategories: (categories) => set({ categories }),
-  setDocuments: (documents) => set({ documents }),
-  setCourseSubjects: (courseSubjects) => set({ courseSubjects }),
-  setMomentTypes: (momentTypes) => set({ momentTypes }),
-  setActivitiesByMoment: (activitiesByMoment) => set({ activitiesByMoment }),
-  setActivityRecommendations: (activityRecommendations) => set({ activityRecommendations }),
-  setFonts: (fonts) => set({ fonts }),
-
-  updateWizardData: (data) =>
-    set((state) => ({
-      wizardData: { ...state.wizardData, ...data },
-    })),
-
-  resetWizardData: () =>
-    set({
+export const useStore = create<AppState>()(
+  persist(
+    (set, get) => ({
+      users: [],
+      currentUser: null,
+      courses: [],
+      areas: [],
+      subjects: [],
+      nuclei: [],
+      knowledgeAreas: [],
+      categories: [],
+      documents: [],
+      courseSubjects: [],
+      momentTypes: [],
+      activitiesByMoment: { apertura: [], desarrollo: [], cierre: [] },
+      activityRecommendations: null,
+      fonts: [],
       wizardData: {
         step: 1,
         name: '',
@@ -224,39 +149,15 @@ export const useStore = create<AppState>((set, get) => ({
         subjectsData: {},
         subjectCategories: {},
       },
-    }),
-
-  setCurrentDocument: (currentDocument) => set({ currentDocument }),
-
-  addChatMessage: (message) =>
-    set((state) => ({
-      chatHistory: [...state.chatHistory, message],
-    })),
-
-  clearChatHistory: () => set({ chatHistory: [] }),
-  setIsGenerating: (isGenerating) => set({ isGenerating }),
-
-  toggleSubjectExpanded: (subjectId) =>
-    set((state) => ({
-      expandedSubjects: {
-        ...state.expandedSubjects,
-        [subjectId]: !state.expandedSubjects[subjectId],
-      },
-    })),
-
-  setCategoryPickerTarget: (categoryPickerTarget) => set({ categoryPickerTarget }),
-  setTeacherCourses: (teacherCourses) => set({ teacherCourses }),
-  setCurrentCourseSubject: (currentCourseSubject) => set({ currentCourseSubject }),
-  setCoordinationStatus: (coordinationStatus) => set({ coordinationStatus }),
-  setLessonPlans: (lessonPlans) => set({ lessonPlans }),
-
-  updateLessonWizardData: (data) =>
-    set((state) => ({
-      lessonWizardData: { ...state.lessonWizardData, ...data },
-    })),
-
-  resetLessonWizardData: () =>
-    set({
+      currentDocument: null,
+      chatHistory: [],
+      isGenerating: false,
+      expandedSubjects: {},
+      categoryPickerTarget: null,
+      teacherCourses: [],
+      currentCourseSubject: null,
+      coordinationStatus: null,
+      lessonPlans: [],
       lessonWizardData: {
         step: 1,
         classNumber: null,
@@ -276,41 +177,132 @@ export const useStore = create<AppState>((set, get) => ({
         globalFontId: null,
         momentFontIds: { apertura: null, desarrollo: null, cierre: null },
       },
+      currentLessonPlan: null,
+      teacherChatHistory: [],
+      resources: [],
+      currentResource: null,
+
+      setUsers: (users) => set({ users }),
+      setCurrentUser: (currentUser) => set({ currentUser }),
+      setCourses: (courses) => set({ courses }),
+      setAreas: (areas) => set({ areas }),
+      setSubjects: (subjects) => set({ subjects }),
+      setNuclei: (nuclei) => set({ nuclei }),
+      setKnowledgeAreas: (knowledgeAreas) => set({ knowledgeAreas }),
+      setCategories: (categories) => set({ categories }),
+      setDocuments: (documents) => set({ documents }),
+      setCourseSubjects: (courseSubjects) => set({ courseSubjects }),
+      setMomentTypes: (momentTypes) => set({ momentTypes }),
+      setActivitiesByMoment: (activitiesByMoment) => set({ activitiesByMoment }),
+      setActivityRecommendations: (activityRecommendations) => set({ activityRecommendations }),
+      setFonts: (fonts) => set({ fonts }),
+
+      updateWizardData: (data) =>
+        set((state) => ({
+          wizardData: { ...state.wizardData, ...data },
+        })),
+
+      resetWizardData: () =>
+        set({
+          wizardData: {
+            step: 1,
+            name: '',
+            areaId: null,
+            nucleusIds: [],
+            categoryIds: [],
+            startDate: '',
+            endDate: '',
+            subjectsData: {},
+            subjectCategories: {},
+          },
+        }),
+
+      setCurrentDocument: (currentDocument) => set({ currentDocument }),
+
+      addChatMessage: (message) =>
+        set((state) => ({
+          chatHistory: [...state.chatHistory, message],
+        })),
+
+      clearChatHistory: () => set({ chatHistory: [] }),
+      setIsGenerating: (isGenerating) => set({ isGenerating }),
+
+      toggleSubjectExpanded: (subjectId) =>
+        set((state) => ({
+          expandedSubjects: {
+            ...state.expandedSubjects,
+            [subjectId]: !state.expandedSubjects[subjectId],
+          },
+        })),
+
+      setCategoryPickerTarget: (categoryPickerTarget) => set({ categoryPickerTarget }),
+      setTeacherCourses: (teacherCourses) => set({ teacherCourses }),
+      setCurrentCourseSubject: (currentCourseSubject) => set({ currentCourseSubject }),
+      setCoordinationStatus: (coordinationStatus) => set({ coordinationStatus }),
+      setLessonPlans: (lessonPlans) => set({ lessonPlans }),
+
+      updateLessonWizardData: (data) =>
+        set((state) => ({
+          lessonWizardData: { ...state.lessonWizardData, ...data },
+        })),
+
+      resetLessonWizardData: () =>
+        set({
+          lessonWizardData: {
+            step: 1,
+            classNumber: null,
+            title: '',
+            categoryIds: [],
+            objective: '',
+            knowledgeContent: '',
+            didacticStrategies: '',
+            classFormat: '',
+            moments: {
+              apertura: { activities: [] },
+              desarrollo: { activities: [] },
+              cierre: { activities: [] },
+            },
+            customInstruction: '',
+            resourcesMode: 'global',
+            globalFontId: null,
+            momentFontIds: { apertura: null, desarrollo: null, cierre: null },
+          },
+        }),
+
+      setCurrentLessonPlan: (currentLessonPlan) => set({ currentLessonPlan }),
+
+      addTeacherChatMessage: (message) =>
+        set((state) => ({
+          teacherChatHistory: [...state.teacherChatHistory, message],
+        })),
+
+      clearTeacherChatHistory: () => set({ teacherChatHistory: [] }),
+
+      getUserRole: () => {
+        const { currentUser, areas, courseSubjects } = get();
+        if (!currentUser) return null;
+
+        const isCoordinator = areas.some((a) => a.coordinator_id === currentUser.id);
+        const isTeacher = courseSubjects.some((cs) => cs.teacher_id === currentUser.id);
+
+        return isCoordinator ? 'coordinator' : isTeacher ? 'teacher' : null;
+      },
+
+      getUserArea: () => {
+        const { currentUser, areas } = get();
+        if (!currentUser) return undefined;
+        return areas.find((a) => a.coordinator_id === currentUser.id);
+      },
+
+      setResources: (resources) => set({ resources }),
+      setCurrentResource: (currentResource) => set({ currentResource }),
     }),
-
-  setCurrentLessonPlan: (currentLessonPlan) => set({ currentLessonPlan }),
-
-  addTeacherChatMessage: (message) =>
-    set((state) => ({
-      teacherChatHistory: [...state.teacherChatHistory, message],
-    })),
-
-  clearTeacherChatHistory: () => set({ teacherChatHistory: [] }),
-
-  getUserRole: () => {
-    const { currentUser, areas, courseSubjects } = get();
-    if (!currentUser) return null;
-
-    const isCoordinator = areas.some((a) => a.coordinator_id === currentUser.id);
-    const isTeacher = courseSubjects.some((cs) => cs.teacher_id === currentUser.id);
-
-    return isCoordinator ? 'coordinator' : isTeacher ? 'teacher' : null;
-  },
-
-  getUserArea: () => {
-    const { currentUser, areas } = get();
-    if (!currentUser) return undefined;
-    return areas.find((a) => a.coordinator_id === currentUser.id);
-  },
-
-  setResources: (resources) => set({ resources }),
-  setCurrentResource: (currentResource) => set({ currentResource }),
-
-  addInclusionChatMessage: (message) =>
-    set((state) => ({
-      inclusionChatHistory: [...state.inclusionChatHistory, message],
-    })),
-  clearInclusionChatHistory: () => set({ inclusionChatHistory: [] }),
-  setRamps: (ramps) => set({ ramps }),
-  setDevices: (devices) => set({ devices }),
-}));
+    {
+      // Persist only the session so a full page reload (Vite HMR, refresh) keeps the user logged in.
+      // The rest of the data is re-fetched by loadAllData() whenever currentUser is present.
+      name: 'av3-session',
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({ currentUser: state.currentUser }),
+    },
+  ),
+);

@@ -22,6 +22,8 @@ interface CoordinationStatus {
   coordinator_name?: string;
   class_plan?: any[];
   document_id?: number;
+  start_date?: string;
+  end_date?: string;
 }
 
 export function TeacherCourseSubject() {
@@ -91,44 +93,58 @@ export function TeacherCourseSubject() {
     navigate(`/teacher/plan/${documentId}`);
   };
 
-  // Transform class plan data to DocumentSections format
+  // Mismo cálculo de semana que el itinerario del coordinador (Document.tsx):
+  // 4 clases por semana a partir del start_date del documento.
+  const getWeekLabel = (classNumber: number, startDate?: string): string => {
+    if (!startDate) return `Semana ${Math.floor((classNumber - 1) / 4) + 1}`;
+    const start = new Date(startDate);
+    const weekNumber = Math.floor((classNumber - 1) / 4);
+    const weekStart = new Date(start);
+    weekStart.setDate(start.getDate() + weekNumber * 7);
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6);
+    const months = [
+      'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+      'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
+    ];
+    const fmt = (d: Date) => `${d.getDate()} de ${months[d.getMonth()]}`;
+    return `Semana del ${fmt(weekStart)} al ${fmt(weekEnd)}`;
+  };
+
+  // Transform class plan data to DocumentSections format, grouped by week (same as the area itinerary).
   const transformToDocumentSections = (): DocumentSection[] => {
     if (!coordStatus?.class_plan || coordStatus.class_plan.length === 0) {
       return [];
     }
 
-    // Group classes by cuatrimestre (assuming we have this info or can derive it)
-    const classesByCuatrimestre: Record<string, any[]> = {};
+    const sortedClasses = [...coordStatus.class_plan].sort((a: any, b: any) => a.class_number - b.class_number);
 
-    coordStatus.class_plan!.forEach((c: any) => {
-      // For now, let's assume first half of classes are "Primer cuatrimestre" and second half are "Segundo cuatrimestre"
-      // This logic should be adjusted based on actual data structure
-      const cuatrimestre =
-        c.class_number <= Math.ceil(coordStatus.class_plan!.length / 2)
-          ? 'Primer cuatrimestre'
-          : 'Segundo cuatrimestre';
-
-      if (!classesByCuatrimestre[cuatrimestre]) {
-        classesByCuatrimestre[cuatrimestre] = [];
-      }
-      classesByCuatrimestre[cuatrimestre].push(c);
+    const byWeek = new Map<string, any[]>();
+    sortedClasses.forEach((c: any) => {
+      const label = getWeekLabel(c.class_number, coordStatus.start_date);
+      if (!byWeek.has(label)) byWeek.set(label, []);
+      byWeek.get(label)!.push(c);
     });
 
-    return Object.entries(classesByCuatrimestre).map(([name, classes], index) => ({
-      id: index + 1,
-      name,
-      topics: classes.map((c: any): DocumentTopic & { classType?: string } => {
-        const existingPlan = lessonPlanMap[c.class_number];
-        return {
-          id: c.class_number,
-          name: c.title || `Clase ${c.class_number}`,
-          status: existingPlan ? (existingPlan.status === 'planned' ? 'completed' : 'in_progress') : 'pending',
-          categoriesCount: c.category_ids?.length || 0,
-          documentId: existingPlan?.id,
-          classType: c.class_type || 'Individual', // Add class type info
-        };
-      }),
-    }));
+    let sectionId = 0;
+    return Array.from(byWeek.entries()).map(([name, classes]): DocumentSection => {
+      sectionId += 1;
+      return {
+        id: sectionId,
+        name,
+        topics: classes.map((c: any): DocumentTopic & { classType?: string } => {
+          const existingPlan = lessonPlanMap[c.class_number];
+          return {
+            id: c.class_number,
+            name: c.title || `Clase ${c.class_number}`,
+            status: existingPlan ? (existingPlan.status === 'planned' ? 'completed' : 'in_progress') : 'pending',
+            categoriesCount: c.category_ids?.length || 0,
+            documentId: existingPlan?.id,
+            classType: c.class_type || 'Individual',
+          };
+        }),
+      };
+    });
   };
 
   // Custom badge renderer for teacher view

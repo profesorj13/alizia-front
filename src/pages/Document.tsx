@@ -1,11 +1,23 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, X, Calendar, Loader2, Share, CloudCheck } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X, Calendar, Loader2, Share, CloudCheck, Sparkles, Lock } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { Button } from '@/components/ui/button';
 import { ChatBot } from '@/components/ui/ChatBot';
 import { api } from '@/services/api';
 import type { CoordinationDocument, ChatMessage, StrategyType } from '@/types';
+
+// Loader con halo pulsante usado tanto en el contenido como al crear las clases.
+function AiSpinner() {
+  return (
+    <div className="relative">
+      <span className="absolute -inset-2 rounded-full bg-primary/15 blur-md animate-pulse" />
+      <div className="relative w-14 h-14 rounded-full bg-white flex items-center justify-center shadow-sm">
+        <Loader2 className="w-7 h-7 text-primary animate-spin" />
+      </div>
+    </div>
+  );
+}
 
 export function Document() {
   const { id } = useParams();
@@ -123,6 +135,41 @@ export function Document() {
     }
   };
 
+  // Stagger the appearance of each class, in the same order as the render
+  const animateClassesAppearing = (finalDoc: CoordinationDocument) => {
+    const finalSubjectsData = finalDoc.subjects_data || {};
+    const finalSubjects = finalDoc.subjects || [];
+    const allClassesForAnimation: { class_number: number; subject_id: number; subject_name: string }[] = [];
+
+    finalSubjects.forEach((s: any) => {
+      const sData = finalSubjectsData[s.id] || {};
+      const classPlan = sData.class_plan || [];
+      classPlan.forEach((c: any) => {
+        allClassesForAnimation.push({
+          class_number: c.class_number,
+          subject_id: s.id,
+          subject_name: s.name,
+        });
+      });
+    });
+
+    // Sort in same order as render: by class_number, then by subject_name
+    allClassesForAnimation.sort((a, b) => {
+      if (a.class_number !== b.class_number) {
+        return a.class_number - b.class_number;
+      }
+      return a.subject_name.localeCompare(b.subject_name);
+    });
+
+    allClassesForAnimation.forEach((c, index) => {
+      setTimeout(() => {
+        setVisibleClasses((prev) => new Set([...prev, `${c.class_number}-${c.subject_id}`]));
+      }, index * 150); // 150ms delay between each class
+    });
+  };
+
+  // Generates the itinerary content only (strategy, problem_edge, eval_criteria).
+  // Class plans are generated on demand via handleGenerateClasses ("Crear clases").
   const handleGenerateContent = async () => {
     if (!currentDocument) return;
 
@@ -130,64 +177,42 @@ export function Document() {
     setVisibleClasses(new Set());
 
     try {
-      // Step 1: Generate strategy, problem_edge, eval_criteria
       await api.documents.generate(docId, {
         generate_strategy: true,
         generate_class_plans: false,
       });
 
-      // Reload document to show the generated content immediately
+      // Reload document to show the generated content
       const docWithStrategy = await api.documents.getById(docId);
       setCurrentDocument(docWithStrategy);
-      setIsGenerating(false);
-
-      // Step 2: Generate class plans (show loader in classes section)
-      setIsGeneratingClasses(true);
-      await api.documents.generate(docId, {
-        generate_strategy: false,
-        generate_class_plans: true,
-      });
-
-      // Reload document with class plans
-      const finalDoc = await api.documents.getById(docId);
-      setCurrentDocument(finalDoc);
-
-      // Animate classes appearing one by one - build list in same order as render
-      const finalSubjectsData = finalDoc.subjects_data || {};
-      const finalSubjects = finalDoc.subjects || [];
-      const allClassesForAnimation: { class_number: number; subject_id: number; subject_name: string }[] = [];
-
-      finalSubjects.forEach((s: any) => {
-        const sData = finalSubjectsData[s.id] || {};
-        const classPlan = sData.class_plan || [];
-        classPlan.forEach((c: any) => {
-          allClassesForAnimation.push({
-            class_number: c.class_number,
-            subject_id: s.id,
-            subject_name: s.name,
-          });
-        });
-      });
-
-      // Sort in same order as render: by class_number, then by subject_name
-      allClassesForAnimation.sort((a, b) => {
-        if (a.class_number !== b.class_number) {
-          return a.class_number - b.class_number;
-        }
-        return a.subject_name.localeCompare(b.subject_name);
-      });
-
-      // Stagger the appearance of each class
-      allClassesForAnimation.forEach((c, index) => {
-        setTimeout(() => {
-          setVisibleClasses((prev) => new Set([...prev, `${c.class_number}-${c.subject_id}`]));
-        }, index * 150); // 150ms delay between each class
-      });
     } catch (error) {
       console.error('Error generating content:', error);
       alert('Error al generar contenido con IA');
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  // Generates the class plans (triggered by the "Crear clases" button).
+  const handleGenerateClasses = async () => {
+    if (!currentDocument) return;
+
+    setIsGeneratingClasses(true);
+    setVisibleClasses(new Set());
+
+    try {
+      await api.documents.generate(docId, {
+        generate_strategy: false,
+        generate_class_plans: true,
+      });
+
+      const finalDoc = await api.documents.getById(docId);
+      setCurrentDocument(finalDoc);
+      animateClassesAppearing(finalDoc);
+    } catch (error) {
+      console.error('Error generating classes:', error);
+      alert('Error al generar las clases con IA');
+    } finally {
       setIsGeneratingClasses(false);
     }
   };
@@ -310,6 +335,7 @@ export function Document() {
   const subjectsData = currentDocument.subjects_data || {};
   const subjects = currentDocument.subjects || [];
   const hasContent = !!currentDocument.methodological_strategies;
+  const hasClasses = subjects.some((s: any) => ((subjectsData[s.id] || {}).class_plan || []).length > 0);
 
   return (
     <div className="h-screen flex flex-col gradient-background">
@@ -435,8 +461,8 @@ export function Document() {
                   <h3 className="section-title text-[#10182B]">Eje problemático</h3>
                   {isGenerating ? (
                     <div className="flex flex-col items-center justify-center py-12">
-                      <Loader2 className="w-8 h-8 animate-spin text-primary mb-2" />
-                      <p className="body-2-regular text-[#47566C]">Generando contenido con IA...</p>
+                      <AiSpinner />
+                      <p className="body-2-regular text-[#47566C] mt-4">Generando contenido con IA...</p>
                     </div>
                   ) : (
                     <div>
@@ -547,8 +573,8 @@ export function Document() {
                   </div>
                   {isGenerating ? (
                     <div className="flex flex-col items-center justify-center py-12">
-                      <Loader2 className="w-8 h-8 animate-spin text-primary mb-2" />
-                      <p className="body-2-regular text-[#47566C]">Generando contenido con IA...</p>
+                      <AiSpinner />
+                      <p className="body-2-regular text-[#47566C] mt-4">Generando contenido con IA...</p>
                     </div>
                   ) : (
                     <div>
@@ -615,8 +641,8 @@ export function Document() {
                   <h3 className="section-title text-[#10182B]">Criterios de evaluación</h3>
                   {isGenerating ? (
                     <div className="flex flex-col items-center justify-center py-12">
-                      <Loader2 className="w-8 h-8 animate-spin text-primary mb-2" />
-                      <p className="body-2-regular text-[#47566C]">Generando contenido con IA...</p>
+                      <AiSpinner />
+                      <p className="body-2-regular text-[#47566C] mt-4">Generando contenido con IA...</p>
                     </div>
                   ) : (
                     <div>
@@ -723,10 +749,45 @@ export function Document() {
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 space-y-6">
-              {isGeneratingClasses ? (
-                <div className="flex flex-col items-center justify-center py-12">
-                  <Loader2 className="w-8 h-8 animate-spin text-primary mb-2" />
-                  <p className="body-2-regular text-[#47566C]">Generando clases con IA...</p>
+              {isGenerating ? (
+                /* Estado A: el itinerario se está generando → clases en espera, bloqueadas (sin loader) */
+                <div className="h-full flex flex-col items-center justify-center px-6 text-center">
+                  <div className="w-14 h-14 rounded-full bg-[#ECE8FB] flex items-center justify-center mb-4">
+                    <Lock className="w-6 h-6 text-[#9B8FD9]" />
+                  </div>
+                  <p className="headline-1-bold text-[#10182B]">Generá las clases</p>
+                  <p className="body-2-regular text-[#47566C] mt-2">
+                    Estamos armando el itinerario del área. En cuanto esté listo vas a poder crear las clases.
+                  </p>
+                </div>
+              ) : isGeneratingClasses ? (
+                /* Estado C: generando las clases tras presionar "Crear clases" */
+                <div className="h-full flex flex-col items-center justify-center px-6 text-center">
+                  <AiSpinner />
+                  <p className="headline-1-bold text-[#10182B] mt-4">Creando clases</p>
+                  <p className="body-2-regular text-[#47566C] mt-2">
+                    Generando el cronograma de clases por disciplina con IA…
+                  </p>
+                </div>
+              ) : !hasClasses ? (
+                /* Estado B: contenido listo, sin clases aún → CTA para crearlas */
+                <div className="h-full flex flex-col items-center justify-center px-6 text-center">
+                  <div className="w-14 h-14 rounded-full bg-primary-gradient flex items-center justify-center shadow-[0_8px_24px_rgba(115,95,227,0.35)] mb-4">
+                    <Sparkles className="w-7 h-7 text-white" />
+                  </div>
+                  <p className="headline-1-bold text-[#10182B]">Generá las clases</p>
+                  <p className="body-2-regular text-[#47566C] mt-2 mb-5">
+                    El itinerario ya está listo. Creá el cronograma de clases por disciplina con un solo clic.
+                  </p>
+                  {!isReadOnly && (
+                    <button
+                      onClick={handleGenerateClasses}
+                      className="w-full h-11 rounded-xl bg-primary-gradient text-white text-sm font-medium flex items-center justify-center gap-2 cursor-pointer hover:opacity-90 transition-opacity shadow-[0_8px_24px_rgba(115,95,227,0.35)]"
+                    >
+                      <Sparkles className="w-4 h-4" />
+                      Crear clases
+                    </button>
+                  )}
                 </div>
               ) : (
               <>

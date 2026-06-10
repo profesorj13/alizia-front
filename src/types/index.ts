@@ -233,67 +233,6 @@ export interface SharedClassNumbersResponse {
   shared_class_info: Record<number, string>;
 }
 
-// Inclusion module types
-export interface Ramp {
-  id: number;
-  name: string;
-  description: string;
-  short_description: string;
-  sort_order: number;
-  devices?: Device[];
-}
-
-export interface Device {
-  id: number;
-  ramp_id: number;
-  name: string;
-  description: string;
-  image_url?: string;
-  qr_code?: string;
-  how_to_use?: string;
-  recommendations?: string;
-  rationale?: string;
-  classroom_benefit?: string;
-  needs_description?: string;
-  evaluation_criteria?: string;
-  quantity: number;
-  sort_order: number;
-  ramp_name?: string;
-}
-
-export interface StudentInclusionProfile {
-  id: number;
-  student_id: number;
-  student_name?: string;
-  is_transitory: boolean;
-  difficulties: string[];
-  free_description?: string;
-  created_at?: string;
-  updated_at?: string;
-}
-
-export interface InclusionStudent {
-  id: number;
-  name: string;
-  course_id: number;
-  profile_id?: number;
-  is_transitory?: boolean;
-  difficulties?: string[];
-  free_description?: string;
-}
-
-export interface InclusionRecommendation {
-  response: string;
-  device: Device | null;
-  student_profile: StudentInclusionProfile;
-}
-
-export interface InclusionAssistResponse {
-  response: string;
-  identified_student: InclusionStudent | null;
-  device: Device | null;
-}
-
 export type UserRole = 'coordinator' | 'teacher' | null;
 
 export interface Resource {
